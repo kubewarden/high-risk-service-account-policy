@@ -1,18 +1,17 @@
 on:
   push:
     branches:
-    - main
-    - master
+      - main
+      - master
     tags:
-    - 'v*'
+      - "v*"
 
 name: Release policy
 
 jobs:
-
   test:
     name: run tests and linters
-    uses: kubewarden/github-actions/.github/workflows/reusable-test-policy-rust.yml@v4.0.0
+    uses: kubewarden/github-actions/.github/workflows/reusable-test-policy-rust.yml@v4.5.1
 
   release:
     needs: test
@@ -24,6 +23,6 @@ jobs:
       # Required by cosign keyless signing
       id-token: write
 
-    uses: kubewarden/github-actions/.github/workflows/reusable-release-policy-rust.yml@v4.0.0
+    uses: kubewarden/github-actions/.github/workflows/reusable-release-policy-rust.yml@v4.5.1
     with:
       oci-target: ghcr.io/kubewarden/policies/high-risk-service-account-policy
