@@ -48,7 +48,7 @@ executionMode: kubewarden-wapc
 backgroundAudit: true
 annotations:
   # artifacthub specific:
-  io.artifacthub.displayName: Hish Risk Service Account Policy
+  io.artifacthub.displayName: High Risk Service Account Policy
   io.artifacthub.resources: Pod
   io.artifacthub.keywords: pod, security, serviceaccount
   io.kubewarden.policy.ociUrl: ghcr.io/kubewarden/policies/high-risk-service-account-policy
