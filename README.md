@@ -14,11 +14,21 @@ associated with the service account in use. If any of the rules are considered
 high-risk, the request is rejected.
 
 Every time a resource that defines a service account is submitted to the
-cluster, the policy will fetch its associated roles and cluster roles and check
-if their rules are a subset of the rules defined in the policy's configuration.
-If they are, the resource is rejected.
+cluster, the policy will query the Kubernetes authorization API the to check if
+the given ServiceAccount has some permissions that it shouldn't. To perform
+this verification, the policy will create an
+[SubjectAccessReview](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#subjectaccessreview-v1-authorization-k8s-io)
+and apply it to cluster check the servica account permissions. If the result
+returned that the service account can perform such operation, the request is
+rejected.
 
-## Settings
+When the policy builds the `SubjectAccessReview` the user set in in the
+resource is defined by `system:serviceaccount:<namespace>:<service-account>`.
+Where the `namespace` is the namespace from the request and the
+`service-account` is the service account from the resource being deployed or
+the `default` one.
+
+## Example
 
 The policy settings consist of a list of rules that service accounts are
 prohibited from having defined in any of their associated roles and cluster
@@ -154,3 +164,6 @@ spec:
           image: bitnami/kubectl:latest
           command: ["sleep", "infinity"]
 ```
+
+In the prevous example, the user set in the `SubjectAccessReview` resource
+would be `syste:serviceaccount:default:super-admin-sa`.
