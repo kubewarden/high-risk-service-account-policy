@@ -43,7 +43,7 @@ fn build_sar_from_rule(service_account: &String, rule: &Rule) -> Vec<SubjectAcce
                         resource_attributes: Some(
                             k8s_openapi::api::authorization::v1::ResourceAttributes {
                                 namespace: rule.namespace.clone(),
-                                verb: Some(verb.to_owned()),
+                                verb: Some(verb.to_string()),
                                 group: Some(api_group.to_owned()),
                                 resource: Some(resource.to_owned()),
                                 subresource: None,
@@ -172,6 +172,8 @@ fn validate(payload: &[u8]) -> CallResult {
 mod tests {
     use k8s_openapi::api::authorization::v1::ResourceAttributes;
 
+    use crate::settings::Verbs;
+
     use super::*;
 
     #[test]
@@ -181,13 +183,13 @@ mod tests {
                 namespace: None,
                 api_groups: vec!["group1".to_owned(), "group2".to_owned()],
                 resources: vec!["myresource".to_owned(), "otherresource".to_owned()],
-                verbs: vec!["create".to_owned(), "update".to_owned()],
+                verbs: vec![Verbs::Create, Verbs::Update],
             },
             Rule {
                 namespace: Some("mynamespace".to_owned()),
                 api_groups: vec!["group1".to_owned(), "group2".to_owned()],
                 resources: vec!["myresource".to_owned(), "otherresource".to_owned()],
-                verbs: vec!["create".to_owned(), "update".to_owned()],
+                verbs: vec![Verbs::Create, Verbs::Update],
             },
         ];
 

@@ -70,6 +70,9 @@ blockRules:
     namespace: "mynamespace"
 ```
 
+The verbs field allow the following values: "create", "update", "delete",
+"get", "list", "watch", "proxy", "\*", "patch" and "deletecollection"
+
 For example, if the policy is deployed with the previous configuration in a
 cluster that has a service account like this:
 

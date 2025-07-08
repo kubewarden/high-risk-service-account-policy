@@ -1,4 +1,40 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Default, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Verbs {
+    #[default]
+    #[serde(rename = "*")]
+    All,
+    Create,
+    Delete,
+    Get,
+    List,
+    Proxy,
+    Update,
+    Watch,
+    Patch,
+    DeleteCollection,
+}
+
+impl Display for Verbs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Verbs::Create => write!(f, "create"),
+            Verbs::Update => write!(f, "update"),
+            Verbs::Delete => write!(f, "delete"),
+            Verbs::Get => write!(f, "get"),
+            Verbs::List => write!(f, "list"),
+            Verbs::Watch => write!(f, "watch"),
+            Verbs::Proxy => write!(f, "proxy"),
+            Verbs::All => write!(f, "*"),
+            Verbs::Patch => write!(f, "patch"),
+            Verbs::DeleteCollection => write!(f, "deletecollection"),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct Rule {
@@ -6,7 +42,7 @@ pub(crate) struct Rule {
     #[serde(rename = "apiGroups")]
     pub api_groups: Vec<String>,
     pub resources: Vec<String>,
-    pub verbs: Vec<String>,
+    pub verbs: Vec<Verbs>,
 }
 // Describe the settings your policy expects when
 // loaded by the policy server.
