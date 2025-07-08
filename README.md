@@ -9,16 +9,17 @@ grant credentials to workloads, enabling them to perform a wide range of
 cluster operations. This can be dangerous when a workload is able to manipulate
 resources it is not authorized to. This policy aims to mitigate such risks by
 preventing resources that utilize high-risk service accounts from being
-deployed in the cluster. To achieve this, the policy inspects the roles
-associated with the service account in use. If any of the rules are considered
-high-risk, the request is rejected.
+deployed in the cluster. To achieve this, the policy leverages the Kubernetes
+authorization API. It assesses whether a service account has permissions to
+perform operations that are not allowed. If such unauthorized permissions are
+detected, the request is rejected.
 
 Every time a resource that defines a service account is submitted to the
 cluster, the policy will query the Kubernetes authorization API the to check if
 the given ServiceAccount has some permissions that it shouldn't. To perform
 this verification, the policy will create an
 [SubjectAccessReview](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#subjectaccessreview-v1-authorization-k8s-io)
-and apply it to cluster check the servica account permissions. If the result
+and apply it to cluster check the service account permissions. If the result
 returned that the service account can perform such operation, the request is
 rejected.
 
