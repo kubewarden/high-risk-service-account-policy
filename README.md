@@ -68,10 +68,25 @@ blockRules:
     resources: ["roles", "rolebindings"]
     verbs: ["*"]
     namespace: "mynamespace"
+#ignoreEvaluationErrors: true
 ```
 
 The verbs field allow the following values: "create", "update", "delete",
 "get", "list", "watch", "proxy", "\*", "patch" and "deletecollection"
+
+The `ignoreEvaluationErrors` field controls how the policy behaves when an
+authorization plugin fails to evaluate the `SubjectAccessReview`. This is an
+optional field, and its default value is `true`.
+
+If `ignoreEvaluationErrors` is set to `true` (the default), an evaluation error
+occurs, and the `SubjectAccessReview` returned that the operation is "not
+allowed" the evaluation error is ignored and the review result returned by the
+authorization API is considered as it is.
+
+If `ignoreEvaluationErrors` is set to `false`, an evaluation error occurs, and
+the `SubjectAccessReview` returned that the operation is "not allowed" the
+review result is still considered "allowed". Causing a rejections of the
+admission request and returning the evaluation error to the user.
 
 For example, if the policy is deployed with the previous configuration in a
 cluster that has a service account like this:

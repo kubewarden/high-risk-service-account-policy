@@ -46,11 +46,22 @@ pub(crate) struct Rule {
 }
 // Describe the settings your policy expects when
 // loaded by the policy server.
-#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(default)]
 pub(crate) struct Settings {
     #[serde(rename = "blockRules")]
     pub block_rules: Vec<Rule>,
+    #[serde(rename = "ignoreEvaluationErrors")]
+    pub ignore_evaluation_errors: Option<bool>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            block_rules: vec![],
+            ignore_evaluation_errors: Some(true),
+        }
+    }
 }
 
 impl kubewarden::settings::Validatable for Settings {
@@ -100,6 +111,7 @@ mod tests {
                 resources: vec![],
                 verbs: vec![],
             }],
+            ..Default::default()
         };
 
         assert!(settings.validate().is_err());

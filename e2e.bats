@@ -23,9 +23,7 @@
 
 	[ "$status" -eq 0 ]
 	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
-	[ $(expr "$output" : '.*"Cannot use service account '\''system:serviceaccount:default:my-service-account'\'' with permissions to perform the following actions: create /pods in namespace not-specified.*') -ne 0 ]
-	[ $(expr "$output" : '.*create apps/deployments in namespace not-specified.*') -ne 0 ]
-	
+	[ $(expr "$output" : '.*"Cannot use service account '\''system:serviceaccount:default:my-service-account'\'' due the following issues: blocked operation for create /pods in namespace not-specified, blocked operation for create apps/deployments in namespace not-specified') -ne 0 ]
 }
 
 @test "With no service account, should use the default service account" {
@@ -38,6 +36,18 @@
 
 	[ "$status" -eq 0 ]
 	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
-	[ $(expr "$output" : '.*"Cannot use service account '\''system:serviceaccount:mynamespace:default'\'' with permissions to perform the following actions: create /pods in namespace not-specified.*') -ne 0 ]
-	[ $(expr "$output" : '.*create apps/deployments in namespace not-specified.*') -ne 0 ]
+	[ $(expr "$output" : '.*"Cannot use service account '\''system:serviceaccount:mynamespace:default'\'' due the following issues: blocked operation for create /pods in namespace not-specified, blocked operation for create apps/deployments in namespace not-specified') -ne 0 ]
+}
+
+@test "Reject service account when authorization plugin fails" {
+	run kwctl run  --request-path test_data/pod_creation.json  --allow-context-aware \
+		--settings-path test_data/settings.json \
+		--replay-host-capabilities-interactions test_data/session_return_error.yml annotated-policy.wasm
+
+  # this prints the output when one the checks below fails
+  echo "output = ${output}"
+
+	[ "$status" -eq 0 ]
+	[ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+	[ $(expr "$output" : '.*"Cannot use service account '\''system:serviceaccount:default:my-service-account'\'' due the following issues: Authorization plugin evaluation error for operation create /pods in namespace not-specified: testing error, blocked operation for create apps/deployments in namespace not-specified') -ne 0 ]
 }
