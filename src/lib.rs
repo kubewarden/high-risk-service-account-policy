@@ -10,7 +10,7 @@ use k8s_openapi::api::{
 
 extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{
-    host_capabilities::kubernetes::{can_i, SubjectAccessReviewRequest},
+    host_capabilities::kubernetes::{SubjectAccessReviewRequest, can_i},
     logging, protocol_version_guest,
     request::ValidationRequest,
     validate_settings,
@@ -19,7 +19,7 @@ use kubewarden::{
 mod settings;
 use settings::{Rule, Settings};
 
-use slog::{info, o, warn, Logger};
+use slog::{Logger, info, o, warn};
 
 lazy_static! {
     static ref LOG_DRAIN: Logger = Logger::root(
