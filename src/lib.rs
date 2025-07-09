@@ -3,10 +3,7 @@ use lazy_static::lazy_static;
 use guest::prelude::*;
 use kubewarden_policy_sdk::wapc_guest as guest;
 
-use k8s_openapi::api::{
-    authorization::v1::{ResourceAttributes, SubjectAccessReview, SubjectAccessReviewStatus},
-    core::v1 as apicore,
-};
+use k8s_openapi::api::{authorization::v1::SubjectAccessReview, core::v1 as apicore};
 
 extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{
@@ -76,56 +73,6 @@ fn build_subject_access_review(
         .collect()
 }
 
-fn get_error_message_sufix(resource_attributes: ResourceAttributes) -> String {
-    format!(
-        "{} {}/{} in namespace {}",
-        resource_attributes
-            .verb
-            .unwrap_or("not-specified".to_owned()),
-        resource_attributes
-            .group
-            .unwrap_or("not-specified".to_owned()),
-        resource_attributes
-            .resource
-            .unwrap_or("not-specified".to_owned()),
-        resource_attributes
-            .namespace
-            .unwrap_or("not-specified".to_owned())
-    )
-}
-
-fn validate_status_results(
-    status: SubjectAccessReviewStatus,
-    resource_attributes: ResourceAttributes,
-    ignore_evaluation_errors: bool,
-) -> Option<String> {
-    match status {
-        SubjectAccessReviewStatus { allowed: true, .. } => Some(format!(
-            "blocked operation for {}",
-            get_error_message_sufix(resource_attributes)
-        )),
-        // if the operation is not allowed, but some authorization plugin evaluation failure
-        // occurred, we can either ignore it or return an error
-        SubjectAccessReviewStatus {
-            evaluation_error: Some(error),
-            ..
-        } => {
-            if ignore_evaluation_errors {
-                return None;
-            }
-            Some(format!(
-                "Authorization plugin evaluation error for operation {}: {}",
-                get_error_message_sufix(resource_attributes),
-                error
-            ))
-        }
-        // We do not care about denied resources, we just want to block allowed
-        // operations. Furthermore, Kubernetes denies operations by default when
-        // authorization pluging abstains to make a decision.
-        _ => None,
-    }
-}
-
 fn validate_pod(
     pod_spec: apicore::PodSpec,
     namespace: String,
@@ -155,15 +102,27 @@ fn validate_pod(
             let status = can_i(sarr);
             match status {
                 Ok(status) => {
-                    let resource_attributes =
-                        sar.spec.resource_attributes.clone().unwrap_or_default();
-                    validate_status_results(
-                        status,
-                        resource_attributes,
-                        settings.ignore_evaluation_errors.unwrap_or_default(),
-                    )
+                    if status.allowed {
+                        let resource_attributes =
+                            sar.spec.resource_attributes.clone().unwrap_or_default();
+                        return Some(format!(
+                            "{} {}/{} in namespace {}",
+                            resource_attributes
+                                .verb
+                                .unwrap_or("not-specified".to_owned()),
+                            resource_attributes
+                                .group
+                                .unwrap_or("not-specified".to_owned()),
+                            resource_attributes
+                                .resource
+                                .unwrap_or("not-specified".to_owned()),
+                            resource_attributes
+                                .namespace
+                                .unwrap_or("not-specified".to_owned())
+                        ));
+                    }
+                    None
                 }
-                .map(|msg| msg.to_string()),
                 Err(e) => {
                     warn!(LOG_DRAIN, "Failed to check permissions: {}", e);
                     Some(format!(
@@ -175,7 +134,7 @@ fn validate_pod(
         .collect::<Vec<String>>();
     if !statuses.is_empty() {
         let error_msg = format!(
-            "Cannot use service account '{}' due the following issues: {}",
+            "Cannot use service account '{}' with permissions to perform the following actions: {}",
             service_account,
             statuses.join(", ")
         );
