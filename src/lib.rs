@@ -3,7 +3,10 @@ use lazy_static::lazy_static;
 use guest::prelude::*;
 use kubewarden_policy_sdk::wapc_guest as guest;
 
-use k8s_openapi::api::{authorization::v1::SubjectAccessReview, core::v1 as apicore};
+use k8s_openapi::api::{
+    authorization::v1::{ResourceAttributes, SubjectAccessReview, SubjectAccessReviewStatus},
+    core::v1 as apicore,
+};
 
 extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{
@@ -73,6 +76,33 @@ fn build_subject_access_review(
         .collect()
 }
 
+fn validate_status_response(
+    status: &SubjectAccessReviewStatus,
+    resource_attributes: ResourceAttributes,
+) -> Option<String> {
+    match status {
+        SubjectAccessReviewStatus { allowed: true, .. } => Some(format!(
+            "{} {}/{} in namespace {}",
+            resource_attributes
+                .verb
+                .unwrap_or("not-specified".to_owned()),
+            resource_attributes
+                .group
+                .unwrap_or("not-specified".to_owned()),
+            resource_attributes
+                .resource
+                .unwrap_or("not-specified".to_owned()),
+            resource_attributes
+                .namespace
+                .unwrap_or("not-specified".to_owned())
+        )),
+        // We do not care about denied resources, we just want to block allowed
+        // operations. Furthermore, Kubernetes denies operations by default when
+        // authorization plugins abstains to make a decision.
+        _ => None,
+    }
+}
+
 fn validate_pod(
     pod_spec: apicore::PodSpec,
     namespace: String,
@@ -101,28 +131,10 @@ fn validate_pod(
             };
             let status = can_i(sarr);
             match status {
-                Ok(status) => {
-                    if status.allowed {
-                        let resource_attributes =
-                            sar.spec.resource_attributes.clone().unwrap_or_default();
-                        return Some(format!(
-                            "{} {}/{} in namespace {}",
-                            resource_attributes
-                                .verb
-                                .unwrap_or("not-specified".to_owned()),
-                            resource_attributes
-                                .group
-                                .unwrap_or("not-specified".to_owned()),
-                            resource_attributes
-                                .resource
-                                .unwrap_or("not-specified".to_owned()),
-                            resource_attributes
-                                .namespace
-                                .unwrap_or("not-specified".to_owned())
-                        ));
-                    }
-                    None
-                }
+                Ok(status) => validate_status_response(
+                    &status,
+                    sar.spec.resource_attributes.clone().unwrap_or_default(),
+                ),
                 Err(e) => {
                     warn!(LOG_DRAIN, "Failed to check permissions: {}", e);
                     Some(format!(
