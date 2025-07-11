@@ -1,0 +1,36 @@
+- type: Exchange
+  request: |
+    !KubernetesCanI
+    request:
+      groups: null
+      resource_attributes:
+        group: ''
+        name: null
+        namespace: null
+        resource: pods
+        subresource: null
+        verb: create
+        version: null
+      user: system:serviceaccount:default:my-service-account
+    disable_cache: false
+  response:
+    type: Error
+    message: kube::Client was not initialized properly
+- type: Exchange
+  request: |
+    !KubernetesCanI
+    request:
+      groups: null
+      resource_attributes:
+        group: apps
+        name: null
+        namespace: null
+        resource: deployments
+        subresource: null
+        verb: create
+        version: null
+      user: system:serviceaccount:default:my-service-account
+    disable_cache: false
+  response:
+    type: Error
+    message: kube::Client was not initialized properly

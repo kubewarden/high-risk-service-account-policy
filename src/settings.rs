@@ -37,9 +37,9 @@ impl Display for Verbs {
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct Rule {
     pub namespace: Option<String>,
-    #[serde(rename = "apiGroups")]
     pub api_groups: Vec<String>,
     pub resources: Vec<String>,
     pub verbs: Vec<Verbs>,
@@ -47,16 +47,15 @@ pub(crate) struct Rule {
 // Describe the settings your policy expects when
 // loaded by the policy server.
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
-#[serde(default)]
+#[serde(default, rename_all = "camelCase")]
 pub(crate) struct Settings {
-    #[serde(rename = "blockRules")]
     pub block_rules: Vec<Rule>,
 }
 
 impl kubewarden::settings::Validatable for Settings {
     fn validate(&self) -> Result<(), String> {
         if self.block_rules.is_empty() {
-            return Err("block_rules cannot be empty".to_string());
+            return Err("block_rules cannot be empty".to_owned());
         }
         for rule in &self.block_rules {
             if let Err(e) = rule.validate() {
@@ -79,29 +78,29 @@ impl Rule {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     use kubewarden_policy_sdk::settings::Validatable;
 
-    #[test]
-    fn validate_missing_settings() {
-        let settings = Settings {
-            ..Default::default()
-        };
-
-        assert!(settings.validate().is_err());
-    }
-
-    #[test]
-    fn validate_empty_settings() {
-        let settings = Settings {
+    #[rstest]
+    #[case(Settings { ..Default::default() }, false)]
+    #[case(Settings {
             block_rules: vec![Rule {
                 namespace: None,
                 api_groups: vec!["".to_owned()],
                 resources: vec![],
                 verbs: vec![],
             }],
-        };
-
-        assert!(settings.validate().is_err());
+        }, false)]
+    #[case(Settings {
+            block_rules: vec![Rule {
+                namespace: Some("default".to_owned()),
+                api_groups: vec!["apps".to_owned()],
+                resources: vec!["deployments".to_owned()],
+                verbs: vec![Verbs::Create],
+            }],
+        }, true)]
+    fn validate_missing_settings(#[case] settings: Settings, #[case] should_succeed: bool) {
+        assert_eq!(settings.validate().is_ok(), should_succeed);
     }
 }

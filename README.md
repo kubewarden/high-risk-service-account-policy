@@ -29,6 +29,10 @@ Where the `namespace` is the namespace from the request and the
 `service-account` is the service account from the resource being deployed or
 the `default` one.
 
+The policy rejects a workload as soon as it found a blocked operation.
+Therefore, it avoids hitting the Kubernetes API too many timeb before rejecting
+the request.
+
 ## Kubernetes Authorization API considerations
 
 Kubernetes authorization API allow cluster operators to define multiple
