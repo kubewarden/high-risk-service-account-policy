@@ -149,7 +149,7 @@ fn validate(payload: &[u8]) -> CallResult {
                 validation_request.request.namespace.to_owned(),
                 &validation_request.settings,
             ) {
-                return kubewarden::reject_request(Some(error), Some(400), None, None);
+                return kubewarden::reject_request(Some(error), Some(403), None, None);
             }
         }
         Err(e) => {
