@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use kubewarden::host_capabilities::kubernetes::ResourceAttributes;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Debug)]
@@ -63,6 +64,27 @@ impl kubewarden::settings::Validatable for Settings {
             }
         }
         Ok(())
+    }
+}
+
+impl From<&Rule> for Vec<ResourceAttributes> {
+    fn from(rule: &Rule) -> Self {
+        rule.api_groups
+            .iter()
+            .flat_map(|api_group| {
+                rule.resources.iter().flat_map(|resource| {
+                    rule.verbs.iter().map(|verb| ResourceAttributes {
+                        namespace: rule.namespace.clone(),
+                        verb: verb.to_string(),
+                        group: Some(api_group.to_owned()),
+                        resource: resource.to_owned(),
+                        subresource: None,
+                        name: None,
+                        ..Default::default()
+                    })
+                })
+            })
+            .collect()
     }
 }
 

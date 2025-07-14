@@ -32,25 +32,13 @@ pub extern "C" fn wapc_init() {
     register_function("protocol_version", protocol_version_guest);
 }
 
-fn build_sar_from_rule(service_account: &String, rule: &Rule) -> Vec<SubjectAccessReview> {
-    rule.api_groups
+fn build_sar_vec_from_rule(service_account: &String, rule: &Rule) -> Vec<SubjectAccessReview> {
+    Vec::<ResourceAttributes>::from(rule)
         .iter()
-        .flat_map(|api_group| {
-            rule.resources.iter().flat_map(move |resource| {
-                rule.verbs.iter().map(move |verb| SubjectAccessReview {
-                    user: service_account.to_owned(),
-                    resource_attributes: ResourceAttributes {
-                        namespace: rule.namespace.clone(),
-                        verb: verb.to_string(),
-                        group: Some(api_group.to_owned()),
-                        resource: resource.to_owned(),
-                        subresource: None,
-                        name: None,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
-            })
+        .map(|resource_attribute| SubjectAccessReview {
+            user: service_account.to_owned(),
+            resource_attributes: resource_attribute.clone(),
+            ..Default::default()
         })
         .collect()
 }
@@ -61,7 +49,7 @@ fn build_subject_access_reviews(
 ) -> Vec<SubjectAccessReview> {
     rules
         .iter()
-        .flat_map(|rule| build_sar_from_rule(&service_account, rule))
+        .flat_map(|rule| build_sar_vec_from_rule(&service_account, rule))
         .collect()
 }
 
