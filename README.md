@@ -2,15 +2,6 @@
 
 # High-Risk Service Account Blocker
 
-A [service
-accounts](https://kubernetes.io/docs/concepts/security/service-accounts/)
-provides an identity for processes that run in a Pod, and maps to a
-ServiceAccount object. When Pods contact the API server, Pods authenticate as a
-particular ServiceAccount.
-
-It's important to review the privileges granted to a ServiceAccount to prevent
-a workload from performing unwanted operations.
-
 The policy can be configured to define a list of resources and operations that
 are considered privileged (for example, `LIST, GET` Secret resources).
 
