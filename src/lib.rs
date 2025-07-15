@@ -88,7 +88,7 @@ fn validate_pod(
 
         match can_i(can_i_request) {
             Ok(status) if status.allowed => {
-                // exit immediately whe allowed to do a high risk operation,
+                // exit immediately when allowed to do a high risk operation,
                 // this is a performance optimization
                 return Err(build_rejection_message(
                     &service_account,
