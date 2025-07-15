@@ -2,17 +2,22 @@
 
 # High-Risk Service Account Blocker
 
-Kubernetes [service
-accounts](https://kubernetes.io/docs/concepts/security/service-accounts/) are
-account types used by workloads running in the cluster. A service account can
-grant credentials to workloads, enabling them to perform a wide range of
-cluster operations. This can be dangerous when a workload is able to manipulate
-resources it is not authorized to. This policy aims to mitigate such risks by
-preventing resources that utilize high-risk service accounts from being
-deployed in the cluster. To achieve this, the policy leverages the Kubernetes
-authorization API. It assesses whether a service account has permissions to
-perform operations that are not allowed. If such unauthorized permissions are
-detected, the request is rejected.
+A [service
+accounts](https://kubernetes.io/docs/concepts/security/service-accounts/)
+provides an identity for processes that run in a Pod, and maps to a ServiceAccount object. When Pods contact the API server, Pods authenticate as a particular ServiceAccount.
+
+It's important to review the privileges granted to a ServiceAccount
+to prevent a workload from performing unwanted operations.
+
+The policy can be configured to define a list of resources and operations
+that are considered privileged (for example, `LIST, GET` Secret resources).
+
+When a workload is defined (a Pod, Deployment, CronJob,...) the policy
+will use the [Kubernetes Authorization API](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access)
+to assess whether the ServiceAccount used by the workload has the rights
+to perform any of the sensitive operations defined by the user.
+
+Workloads that use a high-privileged ServiceAccont are rejected.
 
 Every time a resource that uses a service account is submitted to the cluster,
 the policy will query the Kubernetes authorization API to check if the given
