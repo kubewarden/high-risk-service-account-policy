@@ -1,0 +1,26 @@
+{
+  "blockRules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods"
+      ],
+      "verbs": [
+        "create"
+      ]
+    },
+    {
+      "apiGroups": [
+        "apps"
+      ],
+      "resources": [
+        "deployments"
+      ],
+      "verbs": [
+        "create"
+      ]
+    }
+  ]
+}
