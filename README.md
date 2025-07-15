@@ -30,16 +30,16 @@ Where the `namespace` is the namespace from the request and the
 the `default` one.
 
 The policy rejects a workload as soon as it found a blocked operation.
-Therefore, it avoids hitting the Kubernetes API too many timeb before rejecting
+Therefore, it avoids hitting the Kubernetes API too many times before rejecting
 the request.
 
 ## Kubernetes Authorization API considerations
 
 Kubernetes authorization API allow cluster operators to define multiple
 authorizers (or authorization plugins). Each one can have different results.
-And to reflect this the `SubjectAccessReviewStatus` which is the data returned
-when a `SubjectAccessReview` is created has to fields express all the possibles
-results. The fields are `allowed` and `denined`.
+And to reflect this the `SubjectAccessReviewStatus` (which is the data returned
+when a `SubjectAccessReview` is created) has two fields express all the possibles
+results. The fields are `allowed` and `denied`.
 
 The authorization plugins can:
 
