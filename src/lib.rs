@@ -67,6 +67,7 @@ fn validate_pod(
 
     let service_account = pod_spec
         .service_account_name
+        .or(pod_spec.service_account)
         .map(|sa| format!("system:serviceaccount:{namespace}:{sa}"))
         .unwrap_or_else(|| format!("system:serviceaccount:{namespace}:default"));
 
