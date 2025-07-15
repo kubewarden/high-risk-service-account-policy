@@ -15,8 +15,8 @@ perform operations that are not allowed. If such unauthorized permissions are
 detected, the request is rejected.
 
 Every time a resource that uses a service account is submitted to the cluster,
-the policy will query the Kubernetes authorization API the to check if the
-given ServiceAccount has some permissions that it shouldn't. To perform this
+the policy will query the Kubernetes authorization API to check if the given
+ServiceAccount has some permissions that it shouldn't. To perform this
 verification, the policy will create an
 [SubjectAccessReview](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/subject-access-review-v1/)
 and apply it to cluster check the service account permissions. If the result
@@ -37,30 +37,16 @@ the request.
 
 Kubernetes authorization API allow cluster operators to define multiple
 authorizers (or authorization plugins). Each one can have different results.
-And to reflect this the `SubjectAccessReviewStatus` (which is the data returned
+And to reflect this, the `SubjectAccessReviewStatus` (which is the data returned
 when a `SubjectAccessReview` is created) has two fields express all the possibles
 results. The fields are `allowed` and `denied`.
 
-The authorization plugins can:
-
-- allow an operation. This means that the `SubjectAccessReviewStatus` returned
-  by it will have the `allowed` set to `true` and `denied: false`. Any other authorizaiton plugin
-  will be ignored
-
-- deny the operation. This means that the `SubjectAccessReviewStatus` returned
-  by it will have `denied: true` and `allowed: false`. This will short-circuit the authorization flow
-  and reject the operation. Any other authorizaiton plugin will be ignored
-
-- no decision. In this case the plugin does not have a final decision to allow or
-  deny the operation. Therefore, both `allowed` and `denied` fields are set to `false`.
-  This give the opportunity to other plugins to evaluate the operation.
-
-In summary, the `denied` field is used to short-circuit the authorization
-flow. This means that, if any plugin return it `denied: true`, the
-authorization immediately forbid the request. And the `allowed` fields is to allow
-an operation right away. However, if the plugin does not allow or deny the request, but it wants to give the
-opportunity to other plugins to authorize, it returns `denied: false` or unset
-and return `allowed:false`.
+The `denied` field is used to short-circuit the authorization flow. This means
+that, if any plugin return it `denied: true`, the authorization immediately
+forbid the request. And the `allowed` fields is to allow an operation right
+away. However, if the plugin does not allow or deny the request, but it wants
+to give the opportunity to other plugins to authorize, it returns `denied:
+false` or unset and return `allowed:false`.
 
 These are the possible outcome after all the authorization plugins run:
 
