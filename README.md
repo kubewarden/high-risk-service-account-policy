@@ -55,10 +55,6 @@ The authorization plugins can:
   deny the operation. Therefore, both `allowed` and `denied` fields are set to `false`.
   This give the opportunity to other plugins to evaluate the operation.
 
-:::important
-It's possible to get both `allowed` and `denied` set to `true` at the same time
-:::
-
 In summary, the `denied` field is used to short-circuit the authorization
 flow. This means that, if any plugin return it `denied: true`, the
 authorization immediately forbid the request. And the `allowed` fields is to allow
@@ -75,12 +71,10 @@ These are the possible outcome after all the authorization plugins run:
 - `{allowed: false, denied: false}` : all authorizers abstain a response to the
   request.
 
-:::important
-
-- `{allowed: true, denied: true}` : this is not allowed. Both fields are mutual
-  exclusive
-
-:::
+> [!IMPORTANT]
+>
+> - `{allowed: true, denied: true}` : this is not allowed. Both fields are mutual
+>   exclusive
 
 This policy **only** cares about the `allowed` field. Because this are the
 field that show that the operation under evaluation is permitted. Therefore,
