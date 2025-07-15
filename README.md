@@ -4,18 +4,21 @@
 
 A [service
 accounts](https://kubernetes.io/docs/concepts/security/service-accounts/)
-provides an identity for processes that run in a Pod, and maps to a ServiceAccount object. When Pods contact the API server, Pods authenticate as a particular ServiceAccount.
+provides an identity for processes that run in a Pod, and maps to a
+ServiceAccount object. When Pods contact the API server, Pods authenticate as a
+particular ServiceAccount.
 
-It's important to review the privileges granted to a ServiceAccount
-to prevent a workload from performing unwanted operations.
+It's important to review the privileges granted to a ServiceAccount to prevent
+a workload from performing unwanted operations.
 
-The policy can be configured to define a list of resources and operations
-that are considered privileged (for example, `LIST, GET` Secret resources).
+The policy can be configured to define a list of resources and operations that
+are considered privileged (for example, `LIST, GET` Secret resources).
 
-When a workload is defined (a Pod, Deployment, CronJob,...) the policy
-will use the [Kubernetes Authorization API](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access)
-to assess whether the ServiceAccount used by the workload has the rights
-to perform any of the sensitive operations defined by the user.
+When a workload is defined (a Pod, Deployment, CronJob,...) the policy will use
+the [Kubernetes Authorization
+API](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access)
+to assess whether the ServiceAccount used by the workload has the rights to
+perform any of the sensitive operations defined by the user.
 
 Workloads that use a high-privileged ServiceAccont are rejected.
 
@@ -37,41 +40,6 @@ the `default` one.
 The policy rejects a workload as soon as it found a blocked operation.
 Therefore, it avoids hitting the Kubernetes API too many times before rejecting
 the request.
-
-## Kubernetes Authorization API considerations
-
-Kubernetes authorization API allow cluster operators to define multiple
-authorizers (or authorization plugins). Each one can have different results.
-And to reflect this, the `SubjectAccessReviewStatus` (which is the data returned
-when a `SubjectAccessReview` is created) has two fields express all the possibles
-results. The fields are `allowed` and `denied`.
-
-The `denied` field is used to short-circuit the authorization flow. This means
-that, if any plugin return it `denied: true`, the authorization immediately
-forbid the request. And the `allowed` fields is to allow an operation right
-away. However, if the plugin does not allow or deny the request, but it wants
-to give the opportunity to other plugins to authorize, it returns `denied:
-false` or unset and return `allowed:false`.
-
-These are the possible outcome after all the authorization plugins run:
-
-- `{allowed: true, denied: false}`: some plugin allowed the request. Any remain
-  plugins are skipped
-- `{allowed: false, denied: true}`: some plugin explicit denied the request.
-  Any remain plugins are skipped
-- `{allowed: false, denied: false}` : all authorizers abstain a response to the
-  request.
-
-> [!IMPORTANT]
->
-> - `{allowed: true, denied: true}` : this is not allowed. Both fields are mutual
->   exclusive
-
-This policy **only** cares about the `allowed` field. Because this are the
-field that show that the operation under evaluation is permitted. Therefore,
-this is the case where the admission request should be rejected. All the
-other scenarios, are ignored by the policy and the admission request is
-accepted.
 
 ## Example
 
