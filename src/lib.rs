@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use guest::prelude::*;
 use kubewarden_policy_sdk::wapc_guest as guest;
 
-use k8s_openapi::api::{authorization::v1::SubjectAccessReviewStatus, core::v1 as apicore};
+use k8s_openapi::api::core::v1 as apicore;
 
 extern crate kubewarden_policy_sdk as kubewarden;
 use kubewarden::{
@@ -32,7 +32,7 @@ pub extern "C" fn wapc_init() {
     register_function("protocol_version", protocol_version_guest);
 }
 
-fn build_sar_vec_from_rule(service_account: &String, rule: &Rule) -> Vec<SubjectAccessReview> {
+fn build_sar_vec_from_rule(service_account: &str, rule: &Rule) -> Vec<SubjectAccessReview> {
     Vec::<ResourceAttributes>::from(rule)
         .iter()
         .map(|resource_attribute| SubjectAccessReview {
@@ -43,36 +43,18 @@ fn build_sar_vec_from_rule(service_account: &String, rule: &Rule) -> Vec<Subject
         .collect()
 }
 
-fn build_subject_access_reviews(
-    service_account: String,
-    rules: &[Rule],
-) -> Vec<SubjectAccessReview> {
+fn build_subject_access_reviews(service_account: &str, rules: &[Rule]) -> Vec<SubjectAccessReview> {
     rules
         .iter()
-        .flat_map(|rule| build_sar_vec_from_rule(&service_account, rule))
+        .flat_map(|rule| build_sar_vec_from_rule(service_account, rule))
         .collect()
 }
 
-fn validate_status_response(status: &SubjectAccessReviewStatus) -> Result<(), String> {
-    // We do not care about denied resources, we just want to block allowed
-    // operations. Furthermore, Kubernetes denies operations by default when
-    // authorization plugins abstains to make a decision.
-    if status.allowed {
-        return Err(status.reason.clone().unwrap_or("".to_owned()));
-    }
-    if status.evaluation_error.is_some() {
-        warn!(
-            LOG_DRAIN,
-            "Evaluation error for resource: {}",
-            status.evaluation_error.as_ref().unwrap()
-        );
-    }
-    Ok(())
-}
-
+/// Validates a PodSpec against the configured block rules.
+/// Raises an error if the PodSpec uses a service account that has high-risk permissions
 fn validate_pod(
     pod_spec: apicore::PodSpec,
-    namespace: String,
+    namespace: &str,
     settings: &Settings,
 ) -> Result<(), String> {
     if pod_spec.automount_service_account_token == Some(false) {
@@ -85,7 +67,6 @@ fn validate_pod(
 
     let service_account = pod_spec
         .service_account_name
-        .or(pod_spec.service_account)
         .map(|sa| format!("system:serviceaccount:{namespace}:{sa}"))
         .unwrap_or_else(|| format!("system:serviceaccount:{namespace}:default"));
 
@@ -95,48 +76,67 @@ fn validate_pod(
     );
 
     let subject_access_reviews =
-        build_subject_access_reviews(service_account.clone(), settings.block_rules.as_slice());
+        build_subject_access_reviews(&service_account, settings.block_rules.as_slice());
+    let mut can_i_failure_counter = 0;
 
     for sar in &subject_access_reviews {
-        let status = can_i(CanIRequest {
-            subject_access_review: sar.clone(),
+        let can_i_request = CanIRequest {
+            subject_access_review: sar.to_owned(),
             disable_cache: false,
-        });
-        if let Err(e) = status {
-            warn!(LOG_DRAIN, "Failed to check permissions: {}", e);
-            continue;
-        }
+        };
 
-        let validation_result = validate_status_response(&status.unwrap())
-            .map_err(|e| build_rejection_message(&service_account, &sar.resource_attributes, &e));
-        validation_result?
+        match can_i(can_i_request) {
+            Ok(status) if status.allowed => {
+                // exit immediately whe allowed to do a high risk operation,
+                // this is a performance optimization
+                return Err(build_rejection_message(
+                    &service_account,
+                    &sar.resource_attributes,
+                ));
+            }
+            Ok(_) => {
+                // nothing to do, not allowed to do high risk operations
+            }
+            Err(e) => {
+                warn!(LOG_DRAIN, "Failed to check permissions: {}", e);
+                can_i_failure_counter += 1;
+                continue;
+            }
+        }
     }
+
+    if can_i_failure_counter == subject_access_reviews.len() {
+        // none of the SubjectAccessReviews were successful, we prefer to be cautious
+        // and reject the request
+        return Err("Failed to check permissions for all SubjectAccessReviews".to_owned());
+    }
+
     Ok(())
 }
 
 fn build_rejection_message(
     service_account: &str,
     resource_attributes: &ResourceAttributes,
-    reason: &str,
 ) -> String {
-    let resource_operation = format!(
-        "{} {}/{} in namespace '{}'",
-        resource_attributes.verb,
-        resource_attributes.group.clone().unwrap_or("".to_owned()),
-        resource_attributes.resource,
-        resource_attributes
-            .namespace
-            .clone()
-            .unwrap_or("".to_owned()),
-    );
-    let reason_message = if reason.is_empty() {
-        String::new()
+    let resource_operation = if let Some(namespace) = &resource_attributes.namespace {
+        format!(
+            "{} {}/{} in namespace '{}'",
+            resource_attributes.verb,
+            resource_attributes.group.clone().unwrap_or_default(),
+            resource_attributes.resource,
+            namespace,
+        )
     } else {
-        format!(": {reason}")
+        format!(
+            "{} {}/{} in the cluster",
+            resource_attributes.verb,
+            resource_attributes.group.clone().unwrap_or_default(),
+            resource_attributes.resource
+        )
     };
 
     format!(
-        "Cannot use service account '{service_account}' with permissions to perform {resource_operation}{reason_message}",
+        "Cannot use service account '{service_account}' with permissions to perform {resource_operation}",
     )
 }
 
@@ -146,7 +146,7 @@ fn validate(payload: &[u8]) -> CallResult {
         Ok(pod_spec) => {
             if let Err(error) = validate_pod(
                 pod_spec.unwrap_or_default(),
-                validation_request.request.namespace.to_owned(),
+                &validation_request.request.namespace,
                 &validation_request.settings,
             ) {
                 return kubewarden::reject_request(Some(error), Some(403), None, None);
@@ -155,8 +155,8 @@ fn validate(payload: &[u8]) -> CallResult {
         Err(e) => {
             warn!(LOG_DRAIN, "Failed to extract pod spec: {}", e);
             return kubewarden::reject_request(
-                Some("Failed to parse request".to_owned()),
-                Some(403),
+                Some("Failed to extract pod spec".to_owned()),
+                Some(400),
                 None,
                 None,
             );
@@ -174,24 +174,26 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("Insufficient permissions")]
-    #[case("")]
-    fn test_rejection_message(#[case] reason: &str) {
+    #[case(Some("test".to_string()))]
+    #[case(None)]
+    fn test_rejection_message(#[case] namespace: Option<String>) {
         let service_account = "test-sa";
         let resource_attributes = ResourceAttributes {
-            namespace: Some("test-namespace".to_owned()),
+            namespace: namespace.clone(),
             verb: "create".to_owned(),
             group: Some("test-group".to_owned()),
             resource: "test-resource".to_owned(),
             ..Default::default()
         };
-        let mut expected_message = "Cannot use service account 'test-sa' with permissions to perform create test-group/test-resource in namespace 'test-namespace'".to_string();
-        if !reason.is_empty() {
-            expected_message = format!("{expected_message}: {reason}")
-        }
+        let expected_base_msg = "Cannot use service account 'test-sa' with permissions to perform create test-group/test-resource";
+        let expected_msg = if let Some(namespace) = namespace {
+            format!("{expected_base_msg} in namespace '{namespace}'")
+        } else {
+            format!("{expected_base_msg} in the cluster")
+        };
 
-        let message = build_rejection_message(service_account, &resource_attributes, reason);
-        assert_eq!(message, expected_message);
+        let message = build_rejection_message(service_account, &resource_attributes);
+        assert_eq!(message, expected_msg);
     }
 
     #[test]
@@ -211,7 +213,7 @@ mod tests {
             },
         ];
 
-        let sar = build_subject_access_reviews("test-sa".to_owned(), &rules);
+        let sar = build_subject_access_reviews("test-sa", &rules);
         assert_eq!(
             sar,
             vec![
