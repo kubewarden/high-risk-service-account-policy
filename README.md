@@ -2,6 +2,12 @@
 
 # High-Risk Service Account Blocker
 
+> [!IMPORTANT]
+> This policy needs Kubewarden `>= 1.27`, as it depends on the new `can_i` host capability.
+>
+> On older Kubewarden versions it fails-closed on execution, rejecting all
+> listened resources under rules, and logging an error in the policy-server.
+
 The policy can be configured to define a list of resources and operations that
 are considered privileged (for example, `LIST, GET` Secret resources).
 
