@@ -4,33 +4,33 @@
 #
 # This config can be saved to its default location with:
 #   kwctl scaffold artifacthub > artifacthub-pkg.yml 
-version: 0.1.1
+version: 0.1.2
 name: high-risk-service-account
 displayName: High Risk Service Account
-createdAt: 2025-07-24T08:29:31.616637766Z
+createdAt: 2025-07-28T08:50:24.482797865Z
 description: Policy to prevent the usage of serviceaccount with too many permissions
 license: Apache-2.0
 homeURL: https://github.com/kubewarden/high-risk-service-account-policy
 containersImages:
 - name: policy
-  image: ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.1
+  image: ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.2
 keywords:
 - pod
 - security
 - serviceaccount
 links:
 - name: policy
-  url: https://github.com/kubewarden/high-risk-service-account-policy/releases/download/v0.1.1/policy.wasm
+  url: https://github.com/kubewarden/high-risk-service-account-policy/releases/download/v0.1.2/policy.wasm
 - name: source
   url: https://github.com/kubewarden/high-risk-service-account-policy
 install: |
   The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
   ```console
-  kwctl pull ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.1
+  kwctl pull ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.2
   ```
   Then, generate the policy manifest and tune it to your liking. For example:
   ```console
-  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.1
+  kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/kubewarden/policies/high-risk-service-account:v0.1.2
   ```
 maintainers:
 - name: Kubewarden developers
