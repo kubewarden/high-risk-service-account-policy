@@ -38,6 +38,11 @@ Here, the `namespace` is the namespace from the request and the
 `service-account` is the service account from the resource being deployed or
 the `default` one.
 
+## Access to Kubernetes resources
+
+The PolicyServer where the this policy runs must have RBAC permissions to
+create `authorization.k8s.io/v1/SubjectAccessReviews`. This is already the case
+for the Kubewarden default PolicyServer.
 
 ## Settings
 
