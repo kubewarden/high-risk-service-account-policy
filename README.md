@@ -44,6 +44,17 @@ The PolicyServer where the this policy runs must have RBAC permissions to
 create `authorization.k8s.io/v1/SubjectAccessReviews`. This is already the case
 for the Kubewarden default PolicyServer.
 
+To do this for other PolicyServers, set their `spec.serviceAccountName` to
+the name of ServiceAccount that is bound to a ClusterRole with a rule:
+
+```yaml
+- apiGroup: "authorization.k8s.io"
+  resources:
+    - "subjectaccessreviews"
+  verbs:
+    - create
+```
+
 ## Settings
 
 The policy settings consist of a list of rules that service accounts are
